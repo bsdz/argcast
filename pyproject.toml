@@ -1,0 +1,30 @@
+[project]
+name = "argcast"
+description = "Automatically cast function parameters at run time based on their types."
+license = "MIT"
+version = "0.2.0"
+readme = "README.md"
+authors = [{name = "Blair Azzopardi", email = "blairuk@gmail.com"}]
+requires-python = '>=3.10,<4.0'
+
+[project.urls]
+repository = "https://github.com/bsdz/argcast"
+
+[project.optional-dependencies]
+dev = [
+  "black>=25.1.0,<26.0.0",
+  "mypy>=1.15.0,<2.0.0",
+  "isort>=6.0.1,<7.0.0",
+  "docformatter>=1.7.0,<2.0.0",
+  "coverage>=7.8.2,<8.0.0",
+  "nox>=2025.5.1,<2026.0.0",
+]
+test = [
+  "pandas>=2.2.3,<3.0.0"
+]
+
+[tool.isort]
+profile = "black"
+
+[tool.setuptools]
+py-modules = ["argcast"]
