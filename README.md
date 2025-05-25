@@ -47,14 +47,17 @@ f([[1, 2], [3, 4]], [[5, 6], [7, 8]], Decimal("2.0"), "TRANSPOSE")
 # returns pd.DataFrame([[34.0, 46.0], [78.0, 106.0]])
 ```
 
-## Warning
+## Limitations
 
-Using this decorator will confuse type checkers like mypy and you
+1) Using this decorator will confuse type checkers like mypy and you
 might wish to place a top level comment in your module like:
 
 ```python
 # mypy: disable-error-code="return-value"
 ```
+
+2) Although basic sequence and mapping types are supported, ie list|tuple|set[str|int|...]
+or dict[..., ...], many other types aren't (eg nested types list[list[...]] etc).
 
 ## Development
 

@@ -4,11 +4,13 @@ import unittest
 from decimal import Decimal
 from enum import Enum
 
+from argcast import DoNotCoerce
 from argcast import coerce_params as coerce
 
 HAS_NUMPY = True
 try:
     import numpy as np
+    import numpy.typing as npt
 except ImportError:
     HAS_NUMPY = False
 
@@ -131,24 +133,70 @@ class TestAutocast(unittest.TestCase):
             def get(cls, name):
                 return cls[name] if isinstance(name, str) else cls(name)
 
-        coerce = coerce_params({np.ndarray: np.array, MatrixOp: MatrixOp.get})
+        coerce = coerce_params({npt.ArrayLike: np.asarray, MatrixOp: MatrixOp.get})
 
         @coerce
         def f(
-            a: np.ndarray, b: np.ndarray, k: np.float64, b_trans: MatrixOp
+            a: npt.ArrayLike, b: npt.ArrayLike, k: np.float64, b_trans: MatrixOp
         ) -> pd.DataFrame:
 
             if b_trans == MatrixOp.INVERSE:
-                b = np.linalg.inv(b)
+                b = np.linalg.inv(b)  # type: ignore[arg-type]
             elif b_trans == MatrixOp.TRANSPOSE:
-                b = b.T
-            return k * a @ b
+                b = b.T  # type: ignore[union-attr]
+            return k * a @ b  # type: ignore[union-attr,call-overload,operator]
 
         self.assertTrue(
             f([[1, 2], [3, 4]], [[5, 6], [7, 8]], Decimal("2.0"), "TRANSPOSE").equals(
                 pd.DataFrame([[34.0, 46.0], [78.0, 106.0]])
             )
         )
+
+    def test_sequences(self):
+
+        @coerce
+        def f(a: list[str], b: list[str]) -> str:
+            return "".join(a) + "".join(b)
+
+        self.assertEqual(f([1, 2, 3], [4, 5, 6]), "123456")
+
+        @coerce
+        def g(a: list[int], b: list[int]) -> tuple[str, ...]:
+            return a + b
+
+        self.assertEqual(g([1, 2, 3], ["4", "5", "6"]), (1, 2, 3, 4, 5, 6))
+
+        @coerce
+        def h(a: set[int], b: set[int]) -> tuple[str, ...]:
+            return a | b
+
+        self.assertEqual(h(tuple([1, 2, 3]), ["3", "4", "5"]), (1, 2, 3, 4, 5))
+
+    def test_mappings(self):
+
+        @coerce
+        def f(a: dict[str, str], b: dict[str, str]) -> dict[str, int]:
+            return list((a | b).items())
+
+        self.assertEqual(
+            f([("a", 1), ("b", 2)], {"a": 3, "b": 4, "c": 5}), {"a": 3, "b": 4, "c": 5}
+        )
+
+    def test_override(self):
+        @coerce(a=int, b=float)
+        def f(a, b):
+            return a + b
+
+        self.assertEqual(f("1", "2.0"), 3.0)
+
+        @coerce(a=DoNotCoerce)
+        def g(a: int, b: int) -> str:
+            return a + b
+
+        self.assertEqual(g(1, "2"), "3")
+
+        with self.assertRaises(TypeError):
+            g("1", "2")
 
 
 if __name__ == "__main__":
